@@ -1,6 +1,6 @@
 # chess-gym
 
-A [Gymnasium](https://gymnasium.farama.org/) environment for chess, built for deep reinforcement learning courses and experiments. Play against a simple greedy bot in a pygame window, or train an agent on a clean, fully-masked chess API.
+A [Gymnasium](https://gymnasium.farama.org/) environment for chess, built for deep reinforcement learning courses and experiments. Play against a simple greedy bot in a pygame window, or train an agent on a clean, fully-masked chess API. Built on [python-chess](https://python-chess.readthedocs.io/).
 
 ## Features
 
@@ -84,7 +84,7 @@ Layer 0 is identical to the plain 4096 encoding. Helpers use [python-chess](http
 ```python
 from chess_gym.env import action_to_uci, uci_to_action
 
-uci_to_action("e2e4")   # 796 — same value as the legacy 4096 encoding
+uci_to_action("e2e4")   # 796 — layer 0, plain e2→e4
 uci_to_action("a7a8n")  # knight underpromotion
 action_to_uci(796, board)  # "e2e4"
 ```
@@ -139,3 +139,7 @@ main.py       # random-vs-random rollout demo
 play.py       # human (White) vs greedy bot (Black) in pygame
 tests/        # pytest suite
 ```
+
+## License
+
+[MIT](LICENSE)
