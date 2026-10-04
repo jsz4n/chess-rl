@@ -1,5 +1,4 @@
 import chess
-import pygame
 import pytest
 
 from chess_gym.render import BOARD_PX, SQUARE_SIZE, pixel_to_square, square_to_pixel

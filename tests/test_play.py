@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 import chess_gym
-from chess_gym.env import ChessEnv, move_to_action
+from chess_gym.env import ChessEnv
 from play import greedy_action
 
 

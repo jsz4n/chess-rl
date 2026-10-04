@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 
-import chess_gym
+import chess_gym  # noqa: F401  (registers Chess-v0)
 
 
 def main() -> None:

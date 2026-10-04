@@ -79,9 +79,8 @@ class ChessEnv(gym.Env):
     ) -> None:
         super().__init__()
         if render_mode not in self.metadata["render_modes"] + [None]:
-            raise ValueError(
-                f"render_mode must be one of {self.metadata['render_modes']}, got {render_mode!r}"
-            )
+            modes = self.metadata["render_modes"]
+            raise ValueError(f"render_mode must be one of {modes}, got {render_mode!r}")
         self.max_steps = max_steps
         self.render_mode = render_mode
         self.initial_fen = fen or chess.STARTING_FEN
