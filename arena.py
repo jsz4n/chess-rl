@@ -5,7 +5,7 @@ import chess
 import pygame
 
 from chess_gym.env import ChessEnv
-from q_learning import greedy_action, load_checkpoint
+from q_learning import greedy_action, load_checkpoint, resolve_fen
 
 
 def load_agent(path, expected_color, parser):
@@ -59,7 +59,11 @@ def main() -> None:
     parser.add_argument("--white", default="checkpoints/q_white.pkl")
     parser.add_argument("--black", default="checkpoints/q_black.pkl")
     parser.add_argument("--games", type=int, default=50)
-    parser.add_argument("--fen")
+    parser.add_argument(
+        "--fen",
+        help="start position FEN, or 'start' for the opening "
+        "(default: white agent's training FEN)",
+    )
     parser.add_argument("--max-steps", type=int, default=200)
     parser.add_argument("--render", choices=["human", "unicode"])
     parser.add_argument("--move-delay", type=float, default=0.35)
@@ -67,7 +71,8 @@ def main() -> None:
 
     white = load_agent(args.white, chess.WHITE, parser)
     black = load_agent(args.black, chess.BLACK, parser)
-    fen = args.fen or white["fen"]
+    fen = resolve_fen(args.fen) or white["fen"]
+    print(f"start position: {fen}")
 
     env = None
     if args.render == "human":
