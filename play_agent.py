@@ -7,19 +7,26 @@ import pygame
 
 import chess_gym
 from chess_gym.render import pixel_to_square
-from q_learning import greedy_action, load_checkpoint
+from q_learning import greedy_action, load_checkpoint, resolve_fen
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Play against a trained Q-agent")
     parser.add_argument("--checkpoint", default="checkpoints/q_white.pkl")
+    parser.add_argument(
+        "--fen",
+        help="start position FEN, or 'start' for the opening (default: checkpoint's)",
+    )
+    parser.add_argument("--max-steps", type=int, default=500)
     args = parser.parse_args()
 
     ckpt = load_checkpoint(args.checkpoint)
-    q, agent_color, fen = ckpt["q"], ckpt["color"], ckpt["fen"]
+    q, agent_color = ckpt["q"], ckpt["color"]
+    fen = resolve_fen(args.fen) or ckpt["fen"]
     human_color = not agent_color
+    print(f"start position: {fen}")
 
-    env = gym.make("Chess-v0", render_mode="human", fen=fen, max_steps=200)
+    env = gym.make("Chess-v0", render_mode="human", fen=fen, max_steps=args.max_steps)
     obs, info = env.reset()
     board = env.unwrapped.board
     renderer = env.unwrapped._ensure_renderer()

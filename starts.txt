@@ -1,0 +1,47 @@
+# Random training starts — one FEN per line, comments and blanks ignored.
+# Mixed sides to move are fine for multi_agent.py self-play.
+# For q_learning.py every entry must match --color's side to move.
+
+# Standard opening
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+
+# Back-rank mate in one (White to move, the repo's default endgame)
+6k1/5ppp/8/8/8/8/8/4R2K w - - 0 1
+
+# Same back-rank idea, Black to move
+4r2k/8/8/8/8/8/5PPP/6K1 b - - 0 1
+
+# K+Q vs K — White mates in a few moves
+6k1/8/8/8/8/8/8/K6Q w - - 0 1
+
+# Quiet Italian-structure midgame, balanced material
+r2q1rk1/ppp2ppp/2npbn2/2b1p3/2B1P3/2NPBN2/PPP2PPP/R2Q1RK1 w - - 0 1
+
+# King-and-pawn race (outside passed pawns, both sides can win)
+8/p7/8/8/8/8/7P/K6k w - - 0 1
+
+# Random positions — sampled from random playouts off the opening (mixed sides to move)
+rn1qkb1r/1pp1ppp1/p2p3n/3P1b1p/5N2/5P2/PPP1P1PP/RNBQKB1R b Qkq - 2 7
+rnbqkb1r/pp1pp1pp/5p1n/2p5/1P6/2NP4/P1P1PPPP/1RBQKBNR b Kkq - 0 4
+rnq2bnr/ppp1p3/4bpk1/2p3pp/4P3/5P1N/PPQP1KPP/RNB2B1R w - - 0 10
+1nbqkb1r/rp1ppp1p/2p2np1/p6P/1P6/P3P3/2PPNPP1/RNBQKB1R w KQk - 0 7
+2bqkbnr/1rppp2p/p4p2/1p4p1/P3P1P1/RPP5/3BKPBP/1N1Qn2R w k - 5 13
+1nb2bnr/3pk1pp/1rp1p3/p4N2/NP2P2q/P7/2PP1PPP/R1BQKB1R b K - 0 12
+rn1qkbnr/pbp3p1/1p1p4/1P3p1p/2PP1p2/P7/RB1QP1PP/1N2KBNR b Kkq - 1 10
+rn1qkb1r/pp2pp1p/4b3/2p3pn/PP1Pp3/N4N1P/RBP1PPP1/4KB1R w K - 0 11
+rnb1kbnr/p2ppppp/1q6/1pp5/8/N2P1P2/PPP1P1PP/R1BQKBNR w KQkq - 1 4
+rnbqk1nr/1ppp1ppp/p3p3/8/1PN5/b3P3/P1PP1PPP/R1BQKBNR b KQkq - 0 4
+
+# Impossible positions — illegal but parseable. python-chess behavior on these
+# is undefined (legal-move generation is not meaningful), so load_fens() rejects
+# them and they are kept commented out. Uncomment at your own risk.
+# 8/8/8/3k4/3K4/8/8/8 w - - 0 1
+# 4k3/8/8/8/8/8/8/3PK3 w - - 0 1
+# 4k3/8/8/8/8/P7/PPPPPPPP/4K3 w - - 0 1
+# 4k3/8/8/8/QQ6/QQQQQQQQ/8/4K3 w - - 0 1
+# R3k3/8/8/8/8/8/8/4K3 w - - 0 1
+# 4k3/4R3/8/8/8/8/4r3/4K3 w - - 0 1
+# 8/8/8/8/8/8/PP4PP/K7 w - - 0 1
+# 4k3/8/8/8/8/8/4P3/4K3 w - e6 0 1
+# 4k3/8/8/8/8/8/8/4K3 w KQkq - 0 1
+# 4k3/8/8/8/8/8/8/K1K5 w - - 0 1

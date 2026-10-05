@@ -50,8 +50,11 @@ def update(q, state_key, action, reward, next_key, next_mask, done):
     row[action] = old + ALPHA * (reward + GAMMA * best_next - old)
 
 
-def play_episode(q, env, color, epsilon=EPSILON, seed=None):
-    obs, _ = env.reset(seed=seed)
+def play_episode(q, env, color, epsilon=EPSILON, seed=None, fen=None):
+    if fen is None:
+        obs, _ = env.reset(seed=seed)
+    else:
+        obs, _ = env.reset(seed=seed, options={"fen": fen})
     state_key = env.board.fen()
     done = False
     while not done:
@@ -86,11 +89,14 @@ def play_episode(q, env, color, epsilon=EPSILON, seed=None):
     return "win" if outcome.winner == color else "loss"
 
 
-def save_checkpoint(path, q, color, fen) -> None:
+def save_checkpoint(path, q, color, fen, fens=None) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    data = {"q": q, "color": color, "fen": fen}
+    if fens is not None:
+        data["fens"] = fens
     with open(path, "wb") as f:
-        pickle.dump({"q": q, "color": color, "fen": fen}, f)
+        pickle.dump(data, f)
 
 
 def load_checkpoint(path):
@@ -98,33 +104,88 @@ def load_checkpoint(path):
         return pickle.load(f)
 
 
+def load_fens(path):
+    fens = []
+    with open(path) as f:
+        for lineno, line in enumerate(f, start=1):
+            fen = line.strip()
+            if not fen or fen.startswith("#"):
+                continue
+            try:
+                board = chess.Board(fen)
+            except ValueError as exc:
+                raise ValueError(f"{path}:{lineno}: invalid FEN ({exc})") from exc
+            if not board.is_valid():
+                reason = board.status().name
+                raise ValueError(f"{path}:{lineno}: illegal position ({reason}): {fen}")
+            fens.append(fen)
+    if not fens:
+        raise ValueError(f"{path}: no FENs found")
+    return fens
+
+
+def resolve_fen(value):
+    if value is None:
+        return None
+    if value == "start":
+        return chess.STARTING_FEN
+    return value
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Tabular Q-learning from a fixed FEN")
-    parser.add_argument("--fen")
+    parser.add_argument("--fen", help="start position FEN, or 'start' for the opening")
+    parser.add_argument(
+        "--fen-file",
+        help="file with one FEN per line; each episode starts from a random entry",
+    )
     parser.add_argument("--color", choices=["white", "black"], default="white")
     parser.add_argument("--episodes", type=int, default=300)
+    parser.add_argument("--max-steps", type=int, default=MAX_STEPS)
     parser.add_argument("--out")
     args = parser.parse_args()
 
-    color = chess.WHITE if args.color == "white" else chess.BLACK
-    fen = args.fen or (DEFAULT_FEN_WHITE if color else DEFAULT_FEN_BLACK)
-    if chess.Board(fen).turn != color:
-        parser.error(
-            f"FEN has {'white' if chess.Board(fen).turn else 'black'} to move, "
-            f"but --color {args.color} was requested"
-        )
+    if args.fen and args.fen_file:
+        parser.error("use either --fen or --fen-file, not both")
 
-    env = ChessEnv(fen=fen, max_steps=MAX_STEPS)
+    color = chess.WHITE if args.color == "white" else chess.BLACK
+    fens = None
+    if args.fen_file:
+        try:
+            fens = load_fens(args.fen_file)
+        except ValueError as exc:
+            parser.error(str(exc))
+        wrong = [f for f in fens if chess.Board(f).turn != color]
+        if wrong:
+            parser.error(
+                f"--fen-file entries must have {args.color} to move; "
+                f"{len(wrong)} do not, first: {wrong[0]}"
+            )
+        fen = fens[0]
+        print(f"start positions: {len(fens)} (random per episode) from {args.fen_file}")
+    else:
+        fen = resolve_fen(args.fen) or (
+            DEFAULT_FEN_WHITE if color else DEFAULT_FEN_BLACK
+        )
+        if chess.Board(fen).turn != color:
+            parser.error(
+                f"FEN has {'white' if chess.Board(fen).turn else 'black'} to move, "
+                f"but --color {args.color} was requested"
+            )
+        print(f"start position: {fen}")
+
+    env = ChessEnv(fen=fen, max_steps=args.max_steps)
     q = {}
     stats = {"win": 0, "loss": 0, "draw": 0}
     for ep in range(1, args.episodes + 1):
-        stats[play_episode(q, env, color)] += 1
+        episode_fen = random.choice(fens) if fens else None
+        stats[play_episode(q, env, color, fen=episode_fen)] += 1
         if ep % 50 == 0:
             print(f"episode {ep}: {stats}")
     print(f"states visited: {len(q)}")
 
     out = args.out or (CHECKPOINT_DIR / f"q_{args.color}.pkl")
-    save_checkpoint(out, q, color, fen)
+    save_checkpoint(out, q, color, fen, fens=fens)
     print(f"checkpoint saved: {out}")
     env.close()
 

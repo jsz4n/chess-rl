@@ -4,12 +4,15 @@ import pytest
 
 from arena import play_game
 from chess_gym.env import ChessEnv
+from federated import train
 from q_learning import (
     DEFAULT_FEN_BLACK,
     DEFAULT_FEN_WHITE,
     greedy_action,
     load_checkpoint,
+    load_fens,
     play_episode,
+    resolve_fen,
     save_checkpoint,
 )
 
@@ -27,6 +30,42 @@ def legal_actions(env: ChessEnv) -> np.ndarray:
 
 def mask(env: ChessEnv) -> np.ndarray:
     return env.unwrapped._get_obs()["action_mask"]
+
+
+class TestLoadFens:
+    def test_parses_and_skips_comments(self, tmp_path):
+        fen_file = tmp_path / "fens.txt"
+        fen_file.write_text(f"# openings\n{DEFAULT_FEN_WHITE}\n\n{DEFAULT_FEN_BLACK}\n")
+        assert load_fens(fen_file) == [DEFAULT_FEN_WHITE, DEFAULT_FEN_BLACK]
+
+    def test_invalid_fen_raises_with_line(self, tmp_path):
+        fen_file = tmp_path / "fens.txt"
+        fen_file.write_text(f"{DEFAULT_FEN_WHITE}\nnot a fen\n")
+        with pytest.raises(ValueError, match="2:"):
+            load_fens(fen_file)
+
+    def test_empty_file_raises(self, tmp_path):
+        fen_file = tmp_path / "fens.txt"
+        fen_file.write_text("# nothing here\n\n")
+        with pytest.raises(ValueError, match="no FENs"):
+            load_fens(fen_file)
+
+    def test_illegal_position_raises(self, tmp_path):
+        fen_file = tmp_path / "fens.txt"
+        fen_file.write_text("8/8/8/3k4/3K4/8/8/8 w - - 0 1\n")
+        with pytest.raises(ValueError, match="illegal position \\(OPPOSITE_CHECK\\)"):
+            load_fens(fen_file)
+
+
+class TestResolveFen:
+    def test_none_passthrough(self):
+        assert resolve_fen(None) is None
+
+    def test_start_token(self):
+        assert resolve_fen("start") == chess.STARTING_FEN
+
+    def test_fen_passthrough(self):
+        assert resolve_fen(DEFAULT_FEN_WHITE) == DEFAULT_FEN_WHITE
 
 
 class TestGreedyAction:
@@ -78,6 +117,20 @@ class TestCheckpoint:
         assert ckpt["fen"] == DEFAULT_FEN_WHITE
         assert ckpt["q"] == q
 
+    def test_roundtrip_with_fens(self, tmp_path):
+        fens = [DEFAULT_FEN_WHITE, DEFAULT_FEN_BLACK]
+        save_checkpoint(tmp_path / "c.pkl", {}, chess.WHITE, fens[0], fens=fens)
+        ckpt = load_checkpoint(tmp_path / "c.pkl")
+        assert ckpt["fen"] == fens[0]
+        assert ckpt["fens"] == fens
+
+    def test_play_episode_from_custom_fen(self):
+        env = ChessEnv(fen=DEFAULT_FEN_WHITE, max_steps=60)
+        q = {}
+        play_episode(q, env, chess.BLACK, fen=DEFAULT_FEN_BLACK)
+        assert DEFAULT_FEN_BLACK in q
+        env.close()
+
     def test_greedy_uses_loaded_table(self, tmp_path, env: ChessEnv):
         fen = env.unwrapped.board.fen()
         best = int(legal_actions(env)[0])
@@ -95,10 +148,7 @@ class TestArena:
 
     def test_trained_white_mates_quickly(self):
         q = {}
-        env = ChessEnv(fen=DEFAULT_FEN_WHITE, max_steps=60)
-        for _ in range(150):
-            play_episode(q, env, chess.WHITE)
-        env.close()
+        train(q, chess.WHITE, DEFAULT_FEN_WHITE, 150, seed=2)
         outcome, steps = play_game(q, {}, DEFAULT_FEN_WHITE, max_steps=30)
         assert outcome is not None and outcome.winner == chess.WHITE
         assert steps <= 5
