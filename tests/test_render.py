@@ -1,7 +1,19 @@
+import os
+
 import chess
 import pytest
 
-from chess_gym.render import BOARD_PX, SQUARE_SIZE, pixel_to_square, square_to_pixel
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+
+from chess_gym.render import (  # noqa: E402
+    BOARD_PX,
+    PIECE_FONT_CANDIDATES,
+    SQUARE_SIZE,
+    PygameRenderer,
+    _piece_font,
+    pixel_to_square,
+    square_to_pixel,
+)
 
 pytest.importorskip("pygame")
 
@@ -33,3 +45,22 @@ class TestPixelToSquare:
 
     def test_origin_is_a8(self):
         assert pixel_to_square(0, 0) == chess.A8
+
+
+class TestPieceFont:
+    def test_candidates_cover_windows_and_linux(self):
+        assert "segoe ui symbol" in PIECE_FONT_CANDIDATES
+        assert "dejavu sans" in PIECE_FONT_CANDIDATES
+
+    def test_piece_font_renders_glyphs(self):
+        font = _piece_font(60)
+        assert font is not None
+        surface = font.render("♟", True, (255, 255, 255))
+        assert surface.get_size() > (0, 0)
+
+    def test_renderer_draws_starting_position(self):
+        renderer = PygameRenderer(fps=60)
+        try:
+            renderer.draw(chess.Board())
+        finally:
+            renderer.close()

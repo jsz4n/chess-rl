@@ -28,6 +28,26 @@ GLYPHS = {
     (chess.BLACK, chess.KING): "♚",
 }
 
+PIECE_FONT_CANDIDATES = (
+    "dejavu sans",
+    "noto sans symbols",
+    "freesans",
+    "segoe ui symbol",
+    "apple symbols",
+    "arial unicode ms",
+    "arial",
+)
+
+
+def _piece_font(size: int) -> pygame.font.Font:
+    if not pygame.font.get_init():
+        pygame.font.init()
+    for name in PIECE_FONT_CANDIDATES:
+        path = pygame.font.match_font(name)
+        if path:
+            return pygame.font.Font(path, size)
+    return pygame.font.Font(None, size)
+
 
 def square_to_pixel(square: chess.Square) -> tuple[int, int]:
     file = chess.square_file(square)
@@ -48,9 +68,7 @@ class PygameRenderer:
         pygame.init()
         pygame.display.set_caption(caption)
         self.screen = pygame.display.set_mode((BOARD_PX, BOARD_PX))
-        self.font = pygame.font.SysFont(
-            "dejavu sans, freesans, noto sans, arial", int(SQUARE_SIZE * 0.78)
-        )
+        self.font = _piece_font(int(SQUARE_SIZE * 0.78))
         self.clock = pygame.time.Clock()
         self.fps = fps
         self.selected: chess.Square | None = None
