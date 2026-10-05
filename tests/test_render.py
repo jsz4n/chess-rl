@@ -1,4 +1,5 @@
 import os
+import sys
 
 import chess
 import pytest
@@ -10,6 +11,7 @@ from chess_gym.render import (  # noqa: E402
     PIECE_FONT_CANDIDATES,
     SQUARE_SIZE,
     PygameRenderer,
+    _enable_windows_dpi_awareness,
     _piece_font,
     pixel_to_square,
     square_to_pixel,
@@ -49,8 +51,8 @@ class TestPixelToSquare:
 
 class TestPieceFont:
     def test_candidates_cover_windows_and_linux(self):
-        assert "segoe ui symbol" in PIECE_FONT_CANDIDATES
-        assert "dejavu sans" in PIECE_FONT_CANDIDATES
+        assert "segoeuisymbol" in PIECE_FONT_CANDIDATES
+        assert "dejavusans" in PIECE_FONT_CANDIDATES
 
     def test_piece_font_renders_glyphs(self):
         font = _piece_font(60)
@@ -64,3 +66,8 @@ class TestPieceFont:
             renderer.draw(chess.Board())
         finally:
             renderer.close()
+
+    def test_dpi_awareness_noop_on_non_windows(self):
+        if sys.platform == "win32":
+            pytest.skip("windows-only behavior")
+        assert _enable_windows_dpi_awareness() is None

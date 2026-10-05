@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import contextlib
+import ctypes
+import sys
+
 import chess
 import pygame
 
@@ -29,13 +33,13 @@ GLYPHS = {
 }
 
 PIECE_FONT_CANDIDATES = (
-    "dejavu sans",
+    "segoeuisymbol",
+    "dejavusans",
+    "arialunicodems",
+    "apple symbols",
+    "arial",
     "noto sans symbols",
     "freesans",
-    "segoe ui symbol",
-    "apple symbols",
-    "arial unicode ms",
-    "arial",
 )
 
 
@@ -47,6 +51,15 @@ def _piece_font(size: int) -> pygame.font.Font:
         if path:
             return pygame.font.Font(path, size)
     return pygame.font.Font(None, size)
+
+
+def _enable_windows_dpi_awareness() -> None:
+    if sys.platform != "win32":
+        return
+    with contextlib.suppress(Exception):
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    with contextlib.suppress(Exception):
+        ctypes.windll.user32.SetProcessDPIAware()
 
 
 def square_to_pixel(square: chess.Square) -> tuple[int, int]:
@@ -65,9 +78,13 @@ def pixel_to_square(x: int, y: int) -> chess.Square:
 
 class PygameRenderer:
     def __init__(self, caption: str = "Chess-v0", fps: int = 60) -> None:
+        _enable_windows_dpi_awareness()
         pygame.init()
         pygame.display.set_caption(caption)
-        self.screen = pygame.display.set_mode((BOARD_PX, BOARD_PX))
+        try:
+            self.screen = pygame.display.set_mode((BOARD_PX, BOARD_PX), pygame.SCALED)
+        except pygame.error:
+            self.screen = pygame.display.set_mode((BOARD_PX, BOARD_PX))
         self.font = _piece_font(int(SQUARE_SIZE * 0.78))
         self.clock = pygame.time.Clock()
         self.fps = fps
