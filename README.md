@@ -38,6 +38,55 @@ uv run play.py
 
 Close the window or finish the game to exit; the result appears in the window title.
 
+### Train a Q-learning agent
+
+Tabular Q-learning (ε-greedy, opponent plays uniform random legal moves) from a fixed position. The trained Q-table is saved to `checkpoints/` as a pickle holding `{"q", "color", "fen"}`:
+
+```bash
+uv run q_learning.py --color white --episodes 300   # → checkpoints/q_white.pkl
+uv run q_learning.py --color black --episodes 300   # → checkpoints/q_black.pkl
+```
+
+Defaults train from a rook endgame with a back-rank mate in one (`--fen` to override; it must match the `--color` side to move). The agent only knows positions reachable from that FEN — that's inherent to tabular Q-learning over exact FEN keys.
+
+### Play against your agent
+
+Loads a checkpoint, starts from its position, and opens the click-to-move pygame window. You take the color the agent didn't train as:
+
+```bash
+uv run play_agent.py --checkpoint checkpoints/q_white.pkl   # agent White, you Black
+uv run play_agent.py --checkpoint checkpoints/q_black.pkl   # agent Black, you White
+```
+
+The agent plays greedily (ε=0), with a random tie-break in states it never visited during training.
+
+### Agent vs agent
+
+Headless match between two checkpoints, greedy policies, N games:
+
+```bash
+uv run arena.py --white checkpoints/q_white.pkl --black checkpoints/q_black.pkl --games 50
+```
+
+Prints the W/L/D table and average game length. `--fen` overrides the start position (default: the white agent's training FEN). Note that knowledge doesn't transfer across positions — for meaningful games, both agents should have trained from the same position tree.
+
+Watch a match live in the pygame window (add `--games 1` for a single game, `--move-delay` to slow it down):
+
+```bash
+uv run arena.py --white checkpoints/fed_q_white.pkl --black checkpoints/fed_q_black.pkl --render human --games 1
+```
+
+### Federated training
+
+FedAvg-style tabular Q-learning in `federated.py`: 15 independent client trainings → averaged (mean) in groups of 3 → the 5 aggregated models are retrained → the 5 retrained models are averaged into the final agent. Runs for both colors and saves standard checkpoints (`fed_q_white.pkl`, `fed_q_black.pkl`) usable in `play_agent.py` and `arena.py`:
+
+```bash
+uv run federated.py                        # 15×3 groups, both colors, 300 episodes each
+uv run federated.py --clients 9 --group-size 3 --episodes 200 --color white
+```
+
+Averaging is per state-action entry over the group members that visited it; unseen entries stay absent rather than being diluted toward zero. `--seed` makes the whole pipeline reproducible. Each final agent is evaluated greedily against a random opponent.
+
 ### Use the environment in your own code
 
 ```python
@@ -137,6 +186,10 @@ chess_gym/
   render.py   # PygameRenderer, pixel<->square helpers
 main.py       # random-vs-random rollout demo
 play.py       # human (White) vs greedy bot (Black) in pygame
+q_learning.py # tabular Q-learning training (saves checkpoints/)
+federated.py  # FedAvg-style multi-training + aggregation, both colors
+play_agent.py # human vs trained Q-agent in pygame
+arena.py      # Q-agent vs Q-agent, headless
 tests/        # pytest suite
 ```
 
