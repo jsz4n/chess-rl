@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# Training artifacts
+checkpoints/
+
 # Tooling caches
 .pytest_cache/
 .ruff_cache/
