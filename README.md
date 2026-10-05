@@ -47,7 +47,9 @@ uv run q_learning.py --color white --episodes 300   # → checkpoints/q_white.pk
 uv run q_learning.py --color black --episodes 300   # → checkpoints/q_black.pkl
 ```
 
-Defaults train from a rook endgame with a back-rank mate in one (`--fen` to override; it must match the `--color` side to move). The agent only knows positions reachable from that FEN — that's inherent to tabular Q-learning over exact FEN keys.
+Defaults train from a rook endgame with a back-rank mate in one (`--fen` to override; it must match the `--color` side to move, or `--fen start` for the standard opening). The agent only knows positions reachable from its training FEN — that's inherent to tabular Q-learning over exact FEN keys.
+
+`--fen-file starts.txt` trains from a **random start per episode**: one FEN per line (`#` comments and blank lines ignored), every entry must match `--color`'s side to move. The checkpoint stores the list and resumes it automatically.
 
 ### Play against your agent
 
@@ -58,7 +60,15 @@ uv run play_agent.py --checkpoint checkpoints/q_white.pkl   # agent White, you B
 uv run play_agent.py --checkpoint checkpoints/q_black.pkl   # agent Black, you White
 ```
 
-The agent plays greedily (ε=0), with a random tie-break in states it never visited during training.
+The agent plays greedily (ε=0), with a random tie-break in states it never visited during training. `--fen` overrides the start position (any FEN, or `start` for the standard opening) and `--max-steps` the game limit (default 500). Each run prints the position in effect.
+
+To play a **whole game from the standard opening**, train an agent there first (tabular Q generalizes poorly, so expect weak opening play — more episodes and self-play via `multi_agent.py` help):
+
+```bash
+uv run q_learning.py --fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" \
+    --color white --episodes 1000 --max-steps 500 --out checkpoints/start_white.pkl
+uv run play_agent.py --checkpoint checkpoints/start_white.pkl
+```
 
 ### Agent vs agent
 
@@ -68,7 +78,7 @@ Headless match between two checkpoints, greedy policies, N games:
 uv run arena.py --white checkpoints/q_white.pkl --black checkpoints/q_black.pkl --games 50
 ```
 
-Prints the W/L/D table and average game length. `--fen` overrides the start position (default: the white agent's training FEN). Note that knowledge doesn't transfer across positions — for meaningful games, both agents should have trained from the same position tree.
+Prints the W/L/D table and average game length. `--fen` overrides the start position — any FEN, or `start` for the standard opening (default: the white agent's training FEN). Note that knowledge doesn't transfer across positions — for meaningful games, both agents should have trained from the same position tree.
 
 Watch a match live in the pygame window (add `--games 1` for a single game, `--move-delay` to slow it down):
 
@@ -86,6 +96,20 @@ uv run federated.py --clients 9 --group-size 3 --episodes 200 --color white
 ```
 
 Averaging is per state-action entry over the group members that visited it; unseen entries stay absent rather than being diluted toward zero. `--seed` makes the whole pipeline reproducible. Each final agent is evaluated greedily against a random opponent.
+
+### Self-play training
+
+`multi_agent.py` trains two agents of the same class on identical episodes — both colors learn from every game, with mover-relative rewards sign-flipped for the opponent. Defaults to a **full game from the standard opening** (`--fen` pins a custom position, or `start` to force the opening even when resuming; `--fen-file starts.txt` draws a random start per episode — mixed white/black-to-move entries welcome; `--max-steps` the game limit); use the endgame FENs to reproduce the fixed-position experiments. Training is resumable, and `--render human` plays one exhibition episode instead of training:
+
+```bash
+uv run multi_agent.py --episodes 500
+uv run multi_agent.py --white-checkpoint checkpoints/sp_white.pkl \
+                      --black-checkpoint checkpoints/sp_black.pkl
+uv run multi_agent.py --render human --white-checkpoint checkpoints/sp_white.pkl \
+                      --black-checkpoint checkpoints/sp_black.pkl
+```
+
+Expectations: tabular Q over full-game FEN keys explores a vanishing slice of chess — treat it as a pipeline demo, not a strength baseline.
 
 ### Use the environment in your own code
 
@@ -188,6 +212,7 @@ main.py       # random-vs-random rollout demo
 play.py       # human (White) vs greedy bot (Black) in pygame
 q_learning.py # tabular Q-learning training (saves checkpoints/)
 federated.py  # FedAvg-style multi-training + aggregation, both colors
+multi_agent.py # two-agent self-play trainer (full game by default)
 play_agent.py # human vs trained Q-agent in pygame
 arena.py      # Q-agent vs Q-agent, headless
 tests/        # pytest suite
